@@ -6,21 +6,36 @@ class Asignatura:
         self.nombre = nombre
         self.codigo = codigo
         self.profesor = profesor
-        self.alumnos = []
+        self.alumnos = [] 
     
     def agregar_alumno(self, alumno):
         # Verificar que el alumno no esté ya inscrito y agregarlo (1 punto)
-
+        if alumno not in self.alumnos:
+            self.alumnos.append(alumno)
+            #alumno.inscribirse(self)
     
     def eliminar_alumno(self, alumno):
         # Verificar que el alumno esté inscrito y eliminarlo (1 punto)
-        
+        if alumno in self.alumnos:
+            self.alumnos.remove(alumno)
+            #alumno.retirarse(self)
     
     def mostrar_info(self):
         print(f"Asignatura: {self.nombre} ({self.codigo}) - Profesor: {self.profesor}")
         print("Alumnos inscritos:")
         for alumno in self.alumnos:
             print(f"- {alumno.nombre} ({alumno.matricula})")
+    
+    def to_dict(self):
+        dict = {
+            "nombre": self.nombre,
+            "codigo": self.codigo,
+            "profesor": self.profesor,
+            "alumnos": [alumno.matricula for alumno in self.alumnos]
+
+
+        }
+        return dict
 
 class Alumno:
     def __init__(self, nombre, matricula):
@@ -31,14 +46,33 @@ class Alumno:
     
     def inscribirse(self, asignatura):
         # Agregar la asignatura a la lista de asignaturas del alumno (1 punto)
-    
+        if asignatura not in self.asignaturas:
+            self.asignaturas.append(asignatura)
+           # asignatura.agregar_alumno(self)
+
+
     def retirarse(self, asignatura):
         # Verificar que el alumno esté inscrito y eliminar la asignatura de la lista (1 punto)
-    
+        if asignatura in self.asignaturas:
+            self.asignaturas.remove(asignatura)
+           # asignatura.eliminar_alumno(self)
+
     def ver_calificaciones(self):
         print(f"Calificaciones de {self.nombre}:")
         for examen, calificacion in self.calificaciones.items():
             print(f"{examen}: {calificacion}")
+    
+    def to_dict(self):
+        dict = {
+            "nombre": self.nombre,
+            "matricula": self.matricula,
+            "asignaturas" : [asignatura.codigo for asignatura in self.asignaturas],
+            "calificaciones": self.calificaciones
+        }
+        return dict
+        
+
+        
 
 class Examen:
     def __init__(self, nombre, fecha, asignatura):
@@ -49,11 +83,25 @@ class Examen:
     
     def asignar_calificacion(self, alumno, calificacion):
         # Verificar que el alumno esté inscrito en la asignatura y asignar la calificación (1 punto)
+        if alumno in self.asignatura.alumnos:
+            self.calificaciones[alumno.matricula] = calificacion
+            alumno.calificaciones[self.nombre] = calificacion
     
     def mostrar_calificaciones(self):
         print(f"Calificaciones del examen {self.nombre} ({self.fecha}):")
-        for matricula, calificacion in self.calificaciones.items():
-            print(f"Matricula {matricula}: {calificacion}")
+        for matricula,nota in self.calificaciones.items():
+            print(f'La calificación del alumno {self.asignatura.alumnos[matricula].nombre} es: {nota}')
+                
+
+    def to_dict(self):
+        dict = {
+            "nombre": self.nombre,
+            "fecha": self.fecha,
+            "asignatura" : self.asignatura.codigo,
+            "calificaciones": self.calificaciones
+        }
+        return dict
+    
 
 class GestorAcademico:
     def __init__(self):
@@ -63,18 +111,35 @@ class GestorAcademico:
     
     def agregar_asignatura(self, nombre, codigo, profesor):
         # Agregar la asignatura al diccionario de asignaturas, usando el código como clave (1 punto)
-    
+        self.asignaturas[codigo]= Asignatura(nombre,codigo,profesor)
+
     def agregar_alumno(self, nombre, matricula):
         # Agregar el alumno al diccionario de alumnos, usando la matrícula como clave (1 punto)
-    
+        self.alumnos[matricula] = Alumno(nombre, matricula)
+
     def agregar_alumno_a_asignatura(self, matricula, codigo_asignatura):
         # Verificar que el alumno y la asignatura existan y agregar al alumno a la asignatura (1,5 puntos)
-
+        if matricula in self.alumnos and codigo_asignatura in self.asignaturas:
+            alumno = self.alumnos[matricula]
+            asignatura = self.asignaturas[codigo_asignatura]
+            asignatura.agregar_alumno(alumno)
+            alumno.inscribirse(asignatura)
+        
     
     def registrar_examen(self, nombre, fecha, codigo_asignatura):
         # Verificar que la asignatura exista y registrar el examen (1,5 puntos)
-
+        if codigo_asignatura in self.asignaturas:
+            asignatura=self.asignaturas[codigo_asignatura]
+            examen= Examen(nombre,fecha,asignatura)
+            self.examenes[nombre]=examen
     
+    def asignar_calificaciones(self, examen):
+        for alumno in examen.asignatura.alumnos:
+            nota = float(input(f"Dame la nota de {alumno.nombre}"))
+            examen.asignar_calificacion(alumno, nota)
+        examen.mostrar_calificaciones()
+
+
     def listar_datos(self):
         print("\nAsignaturas:")
         for asignatura in self.asignaturas.values():
@@ -88,32 +153,70 @@ class GestorAcademico:
     
     def guardar_datos(self, archivo):
         datos = {
-            "asignaturas": {k: v.__dict__ for k, v in self.asignaturas.items()},
-            "alumnos": {k: v.__dict__ for k, v in self.alumnos.items()},
-            "examenes": {k: v.__dict__ for k, v in self.examenes.items()}
+            "asignaturas": {k: v.to_dict() for k, v in self.asignaturas.items()},
+            "alumnos": {k: v.to_dict() for k, v in self.alumnos.items()},
+            "examenes": {k: v.to_dict() for k, v in self.examenes.items()}
         }
         with open(archivo, "w") as f:
             json.dump(datos, f)
     
+
     def cargar_datos(self, archivo):
         try:
             with open(archivo, "r") as f:
                 datos = json.load(f)
+
+            # Cargar asignaturas
+            for codigo, info in datos["asignaturas"].items():
+                asignatura = Asignatura(info["nombre"], codigo, info["profesor"])
+                self.asignaturas[codigo] = asignatura
+
+            # Cargar alumnos
+            for matricula, info in datos["alumnos"].items():
+                alumno = Alumno(info["nombre"], matricula)
+                self.alumnos[matricula] = alumno
+
+            # Restaurar relaciones entre alumnos y asignaturas
+            for matricula, info in datos["alumnos"].items():
+                alumno = self.alumnos[matricula]
+                for codigo_asignatura in info["asignaturas"]:
+                    if codigo_asignatura in self.asignaturas:
+                        asignatura = self.asignaturas[codigo_asignatura]
+                        if alumno not in asignatura.alumnos:  # Asegurar que no se repitan
+                            asignatura.agregar_alumno(alumno)
+                        if asignatura not in alumno.asignaturas:
+                            alumno.inscribirse(asignatura)
+
+                # Restaurar calificaciones
+                alumno.calificaciones = info["calificaciones"]
+
+            # Restaurar calificaciones en los exámenes
+            for nombre, info in datos["examenes"].items():
+                if info["asignatura"] in self.asignaturas:
+                    asignatura = self.asignaturas[info["asignatura"]]
+                    examen = Examen(nombre, info["fecha"], asignatura)
+                    examen.calificaciones = info["calificaciones"]
+                    self.examenes[nombre] = examen
+
                 print("Datos cargados exitosamente.")
+
         except FileNotFoundError:
-            print("Archivo no encontrado.")
+            print("Archivo no encontrado. Se iniciará con datos vacíos.")
+
 
 ### **Interfaz de Usuario Simple (Consola):**
 if __name__ == "__main__":
     gestor = GestorAcademico()
+    gestor.cargar_datos("datos.json")
     while True:
         print("\nSistema de Gestión Académica")
         print("1. Agregar asignatura")
         print("2. Agregar alumno")
         print("3. Registrar examen")
         print("4. Agregar alumno a asignatura")
-        print("5. Listar datos")
-        print("6. Salir")
+        print("5. Calificar examen")
+        print("6. Listar datos")
+        print("7. Salir")
         opcion = input("Seleccione una opción: ")
 
         if opcion == "1":
@@ -135,8 +238,14 @@ if __name__ == "__main__":
             codigo = input("Código de la asignatura: ")
             gestor.agregar_alumno_a_asignatura(matricula, codigo)
         elif opcion == "5":
-            gestor.listar_datos()
+            nombre_examen = input("Dame el nombre de un examen: ")
+            if nombre_examen in gestor.examenes:
+                gestor.asignar_calificaciones(gestor.examenes[nombre_examen])
+            else:
+                print("No existe el examen")
         elif opcion == "6":
+            gestor.listar_datos()
+        elif opcion == "7":
             gestor.guardar_datos("datos.json")
             print("Datos guardados. Saliendo...")
             break
