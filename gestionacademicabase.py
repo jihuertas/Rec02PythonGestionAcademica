@@ -44,6 +44,7 @@ class Alumno:
         self.asignaturas = []
         self.calificaciones = {}
     
+    
     def inscribirse(self, asignatura):
         # Agregar la asignatura a la lista de asignaturas del alumno (1 punto)
         if asignatura not in self.asignaturas:
@@ -90,7 +91,10 @@ class Examen:
     def mostrar_calificaciones(self):
         print(f"Calificaciones del examen {self.nombre} ({self.fecha}):")
         for matricula,nota in self.calificaciones.items():
-            print(f'La calificación del alumno {self.asignatura.alumnos[matricula].nombre} es: {nota}')
+            for alumno in self.asignatura.alumnos:
+                if alumno.matricula == matricula:
+                    print(f'La calificación del alumno {alumno.nombre} es: {nota}')
+                    break
                 
 
     def to_dict(self):
